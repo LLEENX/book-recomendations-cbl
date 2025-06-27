@@ -728,7 +728,7 @@ ratings = model.predict(user_book_array)
 top_ratings_indices = ratings.argsort()[-10:][::-1]
 ```
 
------------------------------------
+---
 
 ---
 
