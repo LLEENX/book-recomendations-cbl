@@ -32,15 +32,17 @@ Dalam proyek ini, digunakan dua pendekatan sistem rekomendasi:
 
 ---
 
-## Data Understanding
+## 📊 Data Understanding
 
-### 📚 Dataset
+### Struktur Dataset dan Statistik Umum
 
-Dataset berasal dari **Amazon Books Dataset** (via Kaggle), terdiri dari tiga file utama:
+Dataset yang digunakan terdiri dari tiga file utama:
 
-- `books.csv`: berisi data buku
-- `ratings.csv`: berisi data penilaian pengguna
-- `users.csv`: berisi data pengguna
+- `books.csv`: 271.360 baris
+- `ratings.csv`: 1.149.780 baris
+- `users.csv`: 278.858 baris
+
+---
 
 📎 **Sumber Data**:  
 [🔗 Kaggle - Book Recommendation Dataset](https://www.kaggle.com/datasets/saurabhbagchi/books-dataset)
@@ -83,22 +85,77 @@ Dataset berasal dari **Amazon Books Dataset** (via Kaggle), terdiri dari tiga fi
 
 ---
 
+### ✅ Penjelasan Detail Fitur & Kualitas Data
+
+#### 📘 books.csv
+
+| Fitur               | Tipe Data | Keterangan                              | Missing Values | Outlier / Catatan                           |
+|---------------------|-----------|------------------------------------------|----------------|---------------------------------------------|
+| ISBN                | String    | Kode unik buku                          | 0              | -                                           |
+| Book-Title          | String    | Judul buku                               | 0              | -                                           |
+| Book-Author         | String    | Nama penulis                             | 1.877          | Diisi manual jika memungkinkan              |
+| Year-Of-Publication | Integer   | Tahun terbit                             | 1              | Ada data tidak logis seperti `0`, `2050+`   |
+| Publisher           | String    | Nama penerbit                            | 3.711          | Dilengkapi secara manual atau di-drop       |
+| Image-URL(s)        | String    | Link gambar sampul buku                  | Banyak         | Diabaikan karena tidak digunakan            |
+
+> **Tindakan**: Kolom `Image-URL` dihapus, nilai kosong pada `Publisher` diisi manual, tahun tidak valid dihapus.
+
+---
+
+#### 👤 users.csv
+
+| Fitur     | Tipe Data | Keterangan               | Missing Values | Outlier / Catatan                        |
+|-----------|-----------|--------------------------|----------------|------------------------------------------|
+| User-ID   | Integer   | ID unik pengguna         | 0              | -                                        |
+| Location  | String    | Lokasi pengguna          | 0              | Banyak nilai generik seperti “unknown”   |
+| Age       | Float     | Usia pengguna            | 110.761        | Banyak outlier (`< 5` dan `> 90`)        |
+
+> **Tindakan**: Nilai `Age < 5` atau `> 90` diubah menjadi NaN, kemudian diimputasi dengan rata-rata.
+
+---
+
+#### ⭐ ratings.csv
+
+| Fitur       | Tipe Data | Keterangan                 | Missing Values | Catatan                                |
+|-------------|-----------|----------------------------|----------------|----------------------------------------|
+| User-ID     | Integer   | ID pengguna                | 0              | -                                      |
+| ISBN        | String    | ISBN buku                  | 0              | -                                      |
+| Book-Rating | Integer   | Rating (0–10)              | 0              | Rating < 6 tidak digunakan dalam model |
+
+---
+
 ## 🧹 Data Preparation
 
-### Pembersihan Data
+## 🧹 Data Preparation
 
-- Hapus kolom gambar (`Image-URL`)
-- Isi nilai kosong pada kolom `Book-Author` dan `Publisher`
-  - Untuk kolom `Publisher`, dilakukan pencarian manual ke Amazon.
-  - Ditemukan dua ISBN dengan data penerbit sebagai berikut:
-    - `193169656X` → Penerbit: **NovelBooks, Inc.**
-    - `1931696993` → Penerbit: **CreateSpace Independent Publishing Platform**
-- Normalisasi nilai pada kolom `Year-Of-Publication`:
-  - Buang nilai yang tidak logis (`<1000` atau `>2025`)
-  - Gantikan nilai NaN dengan median, lalu ubah ke tipe data `int`
-- Normalisasi kolom `Age` (umur pengguna):
-  - Angka yang tidak realistis (`Age < 5` atau `Age > 90`) diubah menjadi `NaN`
-  - Nilai kosong diisi dengan rata-rata, lalu dikonversi menjadi integer
+### Tahapan yang Dilakukan:
+
+1. **Hapus Fitur Tidak Relevan**
+   - `Image-URL` dihapus dari `books.csv`
+
+2. **Perbaikan Nilai Kosong**
+   - `Book-Author` & `Publisher`: Diisi manual jika memungkinkan
+   - `Age`: Imputasi menggunakan **mean usia valid**
+
+3. **Tangani Outlier**
+   - Buang `Year-Of-Publication` di luar rentang [1000, 2025]
+   - Buang `Age` di luar rentang [5, 90]
+
+4. **Normalisasi**
+   - **Rating** dinormalisasi ke rentang 0–1
+
+5. **Sampling**
+   - Untuk efisiensi pelatihan: hanya digunakan **30% sampel data**
+
+6. **Encoding ID**
+   - `User-ID` dan `ISBN` dikodekan menjadi integer
+
+```python
+df['user'] = df['userID'].map(user_to_user_encoded)
+df['book'] = df['bookID'].map(book_to_book_encoded)
+```
+7. **Split Data**
+   - 80% untuk pelatihan, 20% untuk validasi
 
 ---
 
@@ -173,6 +230,42 @@ history = model.fit(
 )
 ```
 
+## 📌 Hasil Top-N Recommendation
+
+### 📚 Menampilkan Rekomendasi untuk User ID: `92979`
+
+---
+
+### 📘 Buku yang Sebelumnya Diberi Rating Tinggi:
+
+- *A Yellow Raft in Blue Water* — oleh **Michael Dorris**
+- *More Headlines* — oleh **Jay Leno**
+
+---
+
+### 📗 10 Buku yang Direkomendasikan:
+
+1. *The Boy Next Door* — oleh **Meggin Cabot**
+2. *Harold and the Purple Crayon* — oleh **Crockett Johnson**
+3. *I Am Legend* — oleh **Richard Matheson**
+4. *Secrets of the Vine Devotional* — oleh **Bruce Wilkinson**
+5. *The Door into Summer* — oleh **Robert A. Heinlein**
+6. *Live Albom* — oleh **Mitch Albom**
+7. *The Vampire Lestat* — oleh **Anne Rice**
+8. *Flashback* — oleh **Nevada Barr**
+9. *The Collected Stories* — oleh **Isaac Bashevis Singer**
+10. *Curanderismo: Mexican American Folk Healing* — oleh **Robert T. Trotter**
+
+---
+
+## 📊 Kelebihan & Kekurangan Pendekatan
+
+| Pendekatan           | Kelebihan                                                       | Kekurangan                                                            |
+|----------------------|------------------------------------------------------------------|-----------------------------------------------------------------------|
+| **Collaborative NN** | Menangkap pola laten kompleks antar user–buku                   | Membutuhkan banyak data dan waktu pelatihan                           |
+| **Content-Based**    | Bisa merekomendasikan item baru meski belum ada rating          | Tidak bisa generalisasi preferensi antar pengguna (cold start issue) |
+
+
 ---
 
 ## 📈 Evaluation
@@ -230,31 +323,6 @@ ratings = model.predict(user_book_array)
 top_ratings_indices = ratings.argsort()[-10:][::-1]
 ```
 
----
-
-## 📘 Contoh Hasil Rekomendasi
-
-**📚 Menampilkan Rekomendasi untuk User ID: 92979**  
-===================================
-
-### 📘 Buku yang sebelumnya diberi rating tinggi:
------------------------------------  
-- *A Yellow Raft in Blue Water* — oleh Michael Dorris  
-- *More Headlines* — oleh Jay Leno  
------------------------------------
-
-### 📗 10 Rekomendasi Buku Terbaik:
------------------------------------  
-- *The Boy Next Door* — oleh Meggin Cabot  
-- *Harold and the Purple Crayon 50th Anniversary Edition (Purple Crayon Books)* — oleh Crockett Johnson  
-- *I Am Legend* — oleh Richard Matheson  
-- *Secrets of the Vine Devotional (The Breakthrough Series)* — oleh Bruce Wilkinson  
-- *The Door into Summer* — oleh Robert A. Heinlein  
-- *Live Albom: The Best of Detroit Free Press Sports Columnist Mitch Albom (Live Albom)* — oleh Mitch Albom  
-- *The Vampire Lestat (Vampire Chronicles, Book II)* — oleh ANNE RICE  
-- *Flashback* — oleh Nevada Barr  
-- *The Collected Stories of Isaac Bashevis Singer* — oleh Isaac Bashevis Singer  
-- *Curanderismo: Mexican American Folk Healing* — oleh Robert T., Ii Trotter  
 -----------------------------------
 
 ---
