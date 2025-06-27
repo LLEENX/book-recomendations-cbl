@@ -20,9 +20,15 @@ Dataset yang digunakan merupakan data rating buku dari Amazon yang tersedia di [
 - Mengembangkan model sistem rekomendasi berbasis rating pengguna.
 - Menghasilkan **top-N rekomendasi buku** yang relevan untuk setiap pengguna.
 
-### Solution Statement
+### Solution Approach
 
-Pendekatan yang digunakan adalah **Collaborative Filtering dengan embedding layer** untuk representasi user dan item (buku), kemudian diprediksi menggunakan **jaringan neural network** sederhana.
+Dalam proyek ini, digunakan dua pendekatan sistem rekomendasi:
+
+1. **Collaborative Filtering berbasis Neural Network**  
+   → Menggunakan embedding untuk merepresentasikan user dan item (buku), dilatih dengan data rating yang telah diberikan pengguna.
+
+2. **Content-Based Filtering (alternatif)** *(tidak diimplementasikan penuh dalam proyek ini, namun dipertimbangkan)*  
+   → Berdasarkan kesamaan atribut buku seperti genre, penulis, atau tahun terbit.
 
 ---
 
@@ -32,28 +38,33 @@ Pendekatan yang digunakan adalah **Collaborative Filtering dengan embedding laye
 
 Dataset berasal dari **Amazon Books Dataset** (via Kaggle), terdiri dari tiga file utama:
 
-- `books.csv`:
-  - ISBN
-  - Book-Title
-  - Book-Author
-  - Year-Of-Publication
-  - Publisher
-- `ratings.csv`:
-  - User-ID
-  - ISBN
-  - Book-Rating
-- `users.csv`:
-  - User-ID
-  - Location
-  - Age
+- `books.csv`: berisi data buku
+- `ratings.csv`: berisi data penilaian pengguna
+- `users.csv`: berisi data pengguna
 
-### 📂 Pembacaan Dataset
+📎 **Sumber Data**:  
+[🔗 Kaggle - Book Recommendation Dataset](https://www.kaggle.com/datasets/saurabhbagchi/books-dataset)
 
-```python
-books = pd.read_csv('books.csv', sep=';', encoding='latin1')
-ratings = pd.read_csv('ratings.csv', sep=';', encoding='latin1')
-users = pd.read_csv('users.csv', sep=';', encoding='latin1')
-```
+### Variabel Penting
+
+- **books.csv**
+  - ISBN (string): kode unik buku
+  - Book-Title (string)
+  - Book-Author (string)
+  - Year-Of-Publication (integer)
+  - Publisher (string)
+
+- **ratings.csv**
+  - User-ID (integer)
+  - ISBN (string)
+  - Book-Rating (integer, rentang 0–10)
+
+- **users.csv**
+  - User-ID (integer)
+  - Location (string)
+  - Age (float)
+
+---
 
 ## 🔍 Pemeriksaan Struktur Data
 
@@ -103,17 +114,8 @@ data_merged = ratings.merge(books, on='ISBN').merge(users, on='User-ID')
 
 ### 🔍 Filter & Encoding
 
-- Hanya ambil rating >= 6
-- Sampling 30% data
-- Encode user dan book ID menjadi angka integer
-
-```python
-df['user'] = df['userID'].map(user_to_user_encoded)
-df['book'] = df['bookID'].map(book_to_book_encoded)
-```
-
-- Normalisasi rating ke 0–1
-- Split data menjadi train dan validation
+- Normalisasi rating ke rentang 0–1
+- Split data menjadi `train` dan `validation`
 
 ---
 
