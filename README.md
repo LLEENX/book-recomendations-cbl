@@ -89,6 +89,35 @@ Dataset yang digunakan terdiri dari tiga file utama:
 
 ## 🧹 Data Preparation
 
+### Tahapan yang Dilakukan:
+
+1. **Hapus Fitur Tidak Relevan**
+   - `Image-URL` dihapus dari `books.csv`
+
+2. **Perbaikan Nilai Kosong**
+   - `Book-Author` & `Publisher`: Diisi manual jika memungkinkan
+   - `Age`: Imputasi menggunakan **mean usia valid**
+
+3. **Tangani Outlier**
+   - Buang `Year-Of-Publication` di luar rentang [1000, 2025]
+   - Buang `Age` di luar rentang [5, 90]
+
+4. **Normalisasi**
+   - **Rating** dinormalisasi ke rentang 0–1
+
+5. **Sampling**
+   - Untuk efisiensi pelatihan: hanya digunakan **30% sampel data**
+
+6. **Encoding ID**
+   - `User-ID` dan `ISBN` dikodekan menjadi integer
+
+```python
+df['user'] = df['userID'].map(user_to_user_encoded)
+df['book'] = df['bookID'].map(book_to_book_encoded)
+```
+7. **Split Data**
+   - 80% untuk pelatihan, 20% untuk validasi
+
 ### ✅ Penjelasan Detail Fitur & Kualitas Data
 
 #### 📘 books.csv
@@ -104,7 +133,7 @@ Dataset yang digunakan terdiri dari tiga file utama:
 
 > **Tindakan**: Kolom `Image-URL` dihapus, nilai kosong pada `Publisher` diisi manual, tahun tidak valid dihapus.
 
-#### 🧼 Pembersihan Data pada books.csv
+### 🧼 Pembersihan Data pada books.csv
 Dataset books.csv memiliki 271.360 entri. Berikut hasil inspeksi awal menggunakan books.info():
 ```
 <class 'pandas.core.frame.DataFrame'>
@@ -122,18 +151,18 @@ Data columns (total 8 columns):
  7   Image-URL-L          271357 non-null  object
 
 ```
-
-#### 🔍 Cek Nilai Kosong
+### 🔍 Cek Nilai Kosong
 
 ```python
 books.isnull().sum()
 ```
 Hasil:
+
 ![image](https://github.com/user-attachments/assets/085a1277-38af-459c-a808-edb1b5c60a99)
 
 Dari gambar dapat diketahui bahwa ada beberapa kolom yang memiliki nilai kosong didalamnya yaitu, `Book-Author`, `Publisher`, dan `Image-URL-L`.
 
-#### ✂️ Menghapus Kolom Gambar
+### ✂️ Menghapus Kolom Gambar
 Kolom `Image-URL-S`, `Image-URL-M`, dan I`mage-URL-L` berisi tautan gambar buku yang tidak digunakan dalam sistem rekomendasi, sehingga dihapus untuk menyederhanakan data.
 
 ```python
@@ -141,7 +170,7 @@ books_cleaned = books.copy()
 books_cleaned.drop(['Image-URL-S', 'Image-URL-M', 'Image-URL-L'], axis=1, inplace=True)
 ```
 
-#### 🖊️ Menangani Missing Value pada Book-Author
+### 🖊️ Menangani Missing Value pada Book-Author
 Terdapat 2 baris yang memiliki nilai kosong pada kolom Book-Author. Solusinya:
 - Jika ISBN ditemukan pada baris lain dengan nilai Book-Author yang valid, maka nilai diambil dari sana
 - Jika tidak ditemukan, nilai akan diisi dengan 'Unknown'
@@ -160,7 +189,7 @@ for idx in missing_authors.index:
 
 Sayangnya tidak ditemukan nama Author dari kedua data tersebut, oleh karena itu kedua data yang tidak memiliki Author diberi nilai 'Unknown'
 
-#### 🏷️ Menangani Missing Value pada Publisher
+### 🏷️ Menangani Missing Value pada Publisher
 Ditemukan 2 baris dengan nilai kosong di kolom Publisher. Nilai ini diisi secara manual berdasarkan hasil pencarian informasi ISBN dari situs eksternal seperti Amazon:
 - ISBN 193169656X → NovelBooks, Inc.
 - ISBN 1931696993 → CreateSpace Independent Publishing Platform
@@ -174,7 +203,7 @@ books_cleaned.loc[books_cleaned['ISBN'] == '1931696993', 'Publisher'] = 'CreateS
 
 Kedua baris tersebut diisi secara manual berdasarkan hasil pencarian ISBN dari situs eksternal (seperti Amazon). Kita gunakan metode .loc[] untuk menyasar ISBN tertentu dan mengisi kolom Publisher yang kosong dengan data yang benar.
 
-#### Cek kembali nilai data book yang kosong
+### Cek kembali nilai data book yang kosong
 
 ```python
 # Cek jumlah nilai kosong di setiap kolom
@@ -182,7 +211,102 @@ books_cleaned.isnull().sum()
 ```
 ![image](https://github.com/user-attachments/assets/a2b780dc-fded-46c1-b7c7-e6aa36e0bd8c)
 
-Data buku sekarang sudah bersih.
+### 📅 Pembersihan Kolom Year-Of-Publication
+
+```python
+books_cleaned.info()
+```
+
+```
+<class 'pandas.core.frame.DataFrame'>
+RangeIndex: 271360 entries, 0 to 271359
+Data columns (total 5 columns):
+ #   Column               Non-Null Count   Dtype 
+---  ------               --------------   ----- 
+ 0   ISBN                 271360 non-null  object
+ 1   Book-Title           271360 non-null  object
+ 2   Book-Author          271360 non-null  object
+ 3   Year-Of-Publication  271360 non-null  object
+ 4   Publisher            271360 non-null  object
+dtypes: object(5)
+memory usage: 10.4+ MB
+```
+Kolom Year-Of-Publication saat ini masih bertipe object (teks), padahal seharusnya berupa angka. Beberapa nilai bahkan mengandung teks seperti nama penerbit.
+
+Disini saya akan melakukan beberapa hal:
+- Menyaring data yang valid (angka).
+- Mengubah nilai tahun ke tipe int.
+- Mengganti nilai tidak valid (misalnya tahun < 1000 atau > 2025) dengan NaN, lalu imputasi menggunakan modus (tahun terbanyak).
+
+### 🔄 Mengubah kolom Year-Of-Publication
+
+Saya menggunakan pd.to_numeric() untuk mengubah kolom Year-Of-Publication menjadi angka (int64 atau float64).
+Parameter errors='coerce' akan mengubah data yang tidak bisa dikonversi menjadi NaN (contohnya tahun seperti 'DK Publishing Inc' atau 'Gallimard' yang kadang muncul karena kesalahan input).
+
+```python
+books_cleaned['Year-Of-Publication'] = pd.to_numeric(books_cleaned['Year-Of-Publication'], errors='coerce')
+```
+
+🔍 Cek nilai unik yang tidak realistis
+
+```
+print("Tahun yang tidak realistis:")
+print(sorted(books_cleaned['Year-Of-Publication'].unique())[:10])  # Tahun terendah
+print(sorted(books_cleaned['Year-Of-Publication'].unique())[-10:]) # Tahun tertinggi
+```
+
+Hasil menunjukkan ada tahun yang tidak wajar dalam mempublish buku yaitu pada tahun 0 dan juga tahun 2050.
+Data ini diamsusi karena hasil kesalahan input. 
+
+```
+Tahun yang tidak realistis:
+[np.float64(0.0), np.float64(1376.0), np.float64(1378.0), np.float64(1806.0), np.float64(1897.0), np.float64(1900.0), np.float64(1901.0), np.float64(1902.0), np.float64(1904.0), np.float64(1906.0)]
+[np.float64(2012.0), np.float64(2020.0), np.float64(2021.0), np.float64(2024.0), np.float64(2026.0), np.float64(2030.0), np.float64(2037.0), np.float64(2038.0), np.float64(2050.0), np.float64(nan)]
+```
+
+### 🧼 Bersihkan tahun yang tidak valid
+
+Tahun terbit buku yang valid umumnya berada antara 1000 dan 2025. Tahun di luar rentang ini dianggap tidak masuk akal dan diubah menjadi NaN agar bisa diisi nanti.
+
+```python
+# 🧼 Bersihkan tahun yang tidak valid: set jadi NaN jika < 1000 atau > 2025
+books_cleaned.loc[(books_cleaned['Year-Of-Publication'] < 1000) | (books_cleaned['Year-Of-Publication'] > 2025), 'Year-Of-Publication'] = np.nan
+```
+
+### 🧮 Isi nilai NaN dengan median tahun yang valid
+
+```
+# 🧮 Isi nilai NaN dengan median tahun yang valid
+median_year = books_cleaned['Year-Of-Publication'].median()
+books_cleaned['Year-Of-Publication'].fillna(median_year, inplace=True)
+
+# Ubah ke integer
+books_cleaned['Year-Of-Publication'] = books_cleaned['Year-Of-Publication'].astype(int)
+```
+
+Setelah tahun tidak valid diubah menjadi NaN dan isi dengan median. Selanjutnya kita ubah kolom menjadi integer untuk efisiensi dan konsistensi.
+
+```python
+books_cleaned.info()
+```
+Cek kembali tipe data kolom buku
+
+```
+<class 'pandas.core.frame.DataFrame'>
+RangeIndex: 271360 entries, 0 to 271359
+Data columns (total 5 columns):
+ #   Column               Non-Null Count   Dtype 
+---  ------               --------------   ----- 
+ 0   ISBN                 271360 non-null  object
+ 1   Book-Title           271360 non-null  object
+ 2   Book-Author          271360 non-null  object
+ 3   Year-Of-Publication  271360 non-null  int64 
+ 4   Publisher            271360 non-null  object
+dtypes: int64(1), object(4)
+memory usage: 10.4+ MB
+```
+
+Sekarang data buku sudah bersih.
 
 ---
 
@@ -283,36 +407,6 @@ Data columns (total 3 columns):
 | Book-Rating | Integer   | Rating (0–10)              | 0              | Rating < 6 tidak digunakan dalam model |
 
 
-
-### Tahapan yang Dilakukan:
-
-1. **Hapus Fitur Tidak Relevan**
-   - `Image-URL` dihapus dari `books.csv`
-
-2. **Perbaikan Nilai Kosong**
-   - `Book-Author` & `Publisher`: Diisi manual jika memungkinkan
-   - `Age`: Imputasi menggunakan **mean usia valid**
-
-3. **Tangani Outlier**
-   - Buang `Year-Of-Publication` di luar rentang [1000, 2025]
-   - Buang `Age` di luar rentang [5, 90]
-
-4. **Normalisasi**
-   - **Rating** dinormalisasi ke rentang 0–1
-
-5. **Sampling**
-   - Untuk efisiensi pelatihan: hanya digunakan **30% sampel data**
-
-6. **Encoding ID**
-   - `User-ID` dan `ISBN` dikodekan menjadi integer
-
-```python
-df['user'] = df['userID'].map(user_to_user_encoded)
-df['book'] = df['bookID'].map(book_to_book_encoded)
-```
-7. **Split Data**
-   - 80% untuk pelatihan, 20% untuk validasi
-
 ---
 
 ### 🔗 Merge Dataset
@@ -320,7 +414,60 @@ df['book'] = df['bookID'].map(book_to_book_encoded)
 Gabungkan `ratings.csv`, `books.csv`, dan `users.csv` menjadi satu dataframe:
 
 ```python
-data_merged = ratings.merge(books, on='ISBN').merge(users, on='User-ID')
+# Gabungkan rating dengan books
+ratings_books = pd.merge(rating, books_cleaned, on='ISBN', how='inner')
+
+# Gabungkan dengan user
+data_merged = pd.merge(ratings_books, user_cleaned, on='User-ID', how='inner')
+```
+
+Tujuannya agar semua informasi yang diperlukan berada dalam satu DataFrame.
+
+---
+
+#### Cek dan Filter Rating yang Bernilai 0
+Karena beberapa dataset rating (termasuk dari Amazon) menyertakan Book-Rating = 0 untuk menandakan bahwa pengguna belum benar-benar memberi rating.
+
+```python
+# Cek distribusi rating
+data_merged['Book-Rating'].value_counts().sort_index()
+```
+![image](https://github.com/user-attachments/assets/6fcb2d35-451f-4283-93b0-f1eeaab8206b)
+
+
+Dapat diketahui:
+- Rating 0 mendominasi (lebih dari 60 ribu entri) — ini menandakan bahwa sebagian besar data hanyalah interaksi pengguna dengan buku (bukan rating sebenarnya).
+- Rating 1–10 jauh lebih sedikit dan itulah yang benar-benar mencerminkan penilaian pengguna.
+
+```
+# Filter hanya data dengan rating > 0
+data_filtered = data_merged[data_merged['Book-Rating'] > 0]
+
+# Cek distribusi ulang
+data_filtered['Book-Rating'].value_counts().sort_index()
+```
+
+Data yang disimpan hanya data rating yang valid (nilai 1–10), karena rating = 0 menandakan pengguna tidak memberikan rating atau hanya melihat buku saja.
+Data ini akan digunakan sebagai dasar model rekomendasi.
+
+### 🧹 Data Preparation untuk Collaborative Filtering
+
+Mengambil kolom yang dibutuhkan saja
+```python
+# Ambil hanya kolom yang relevan untuk model collaborative filtering
+df = data_filtered[['User-ID', 'ISBN', 'Book-Rating']].copy()
+```
+Kita hanya memerlukan kolom:
+- User-ID → sebagai identitas pengguna
+- ISBN → sebagai identitas buku
+- Book-Rating → sebagai label atau nilai yang ingin kita prediksi
+
+### Mengubah Nama Kolom
+Mengganti nama kolom menjadi userID, bookID, dan rating agar lebih konsisten dan mudah digunakan di tahap encoding/training.
+
+```python
+# Ubah nama kolom agar lebih seragam
+df.columns = ['userID', 'bookID', 'rating']
 ```
 
 ---
@@ -329,6 +476,71 @@ data_merged = ratings.merge(books, on='ISBN').merge(users, on='User-ID')
 
 - Normalisasi rating ke rentang 0–1
 - Split data menjadi `train` dan `validation`
+
+### Filtering & Sampling
+Filtering & Sampling sangat penting ketika kita berhadapan dengan dataset yang sangat besar. Pada model ini, data yang diambil hanya data dengan rating >=6, karena dengan nilai minimal adalah 6 sudah cukup untuk memberikan kesan positif dalam sistem rekomendasi.
+
+
+```python
+# Hanya ambil rating >= 6 untuk fokus pada interaksi positif
+df = df[df['rating'] >= 6]
+
+# Ambil sampel 30% saja agar training tidak terlalu lama
+df = df.sample(frac=0.3, random_state=42)
+```
+---
+
+### Encode userID dan bookID menjadi indeks integer
+
+```python
+# Encoding userID dan bookID menjadi indeks integer
+user_ids = df['userID'].unique().tolist()
+user_to_user_encoded = {x: i for i, x in enumerate(user_ids)}
+book_ids = df['bookID'].unique().tolist()
+book_to_book_encoded = {x: i for i, x in enumerate(book_ids)}
+
+# Mapping hasil encoding ke dataframe
+df['user'] = df['userID'].map(user_to_user_encoded)
+df['book'] = df['bookID'].map(book_to_book_encoded)
+```
+Encoding ke dalam indeks integer dilakukan, karena layer embedding membutuhkan input berupa angka.
+map() digunakan untuk menempelkan hasil encoding ke dataframe.
+
+---
+
+### Normalisasi nilai rating ke rentang 0-1
+Dalam proses pelatihan model neural network, sangat penting untuk memastikan bahwa skala data output sesuai dengan fungsi aktivasi yang digunakan. Karena pada model ini digunakan fungsi aktivasi sigmoid, yang menghasilkan output dalam rentang [0, 1], maka nilai rating yang awalnya berada di rentang 0 hingga 10 perlu dinormalisasi terlebih dahulu.
+
+Langkah ini bertujuan untuk:
+- Membantu model belajar dengan lebih stabil dan cepat
+- Mencegah output prediksi berada di luar batas valid
+
+```python
+min_rating = df['rating'].min()
+max_rating = df['rating'].max()
+
+df['scaled_rating'] = df['rating'].apply(lambda x: (x - min_rating) / (max_rating - min_rating))
+```
+
+### Membagi Data untuk Training dan Validasi
+Setelah data disiapkan dan dinormalisasi, tahap berikutnya adalah membagi dataset menjadi dua bagian:
+- Training set (80%) – digunakan untuk melatih model
+- Validation set (20%) – digunakan untuk mengevaluasi performa model di data yang tidak dilatih
+
+Input untuk model berupa pasangan (user, book), sementara target output adalah nilai rating yang telah dinormalisasi. Proses ini memastikan bahwa model diuji pada data yang belum pernah dilihat selama pelatihan, guna menghindari overfitting dan mengukur generalisasi model secara adil.
+
+```python
+# Gabungkan user dan book ke dalam satu array sebagai input
+x = df[['user', 'book']].values
+
+# Output target: scaled rating
+y = df['scaled_rating'].values
+
+# Bagi menjadi 80% training dan 20% validasi
+train_size = int(0.8 * len(x))
+x_train, x_val = x[:train_size], x[train_size:]
+y_train, y_val = y[:train_size], y[train_size:]
+```
 
 ---
 
