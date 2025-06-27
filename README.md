@@ -85,6 +85,10 @@ Dataset yang digunakan terdiri dari tiga file utama:
 
 ---
 
+---
+
+## 🧹 Data Preparation
+
 ### ✅ Penjelasan Detail Fitur & Kualitas Data
 
 #### 📘 books.csv
@@ -122,9 +126,7 @@ Dataset yang digunakan terdiri dari tiga file utama:
 | ISBN        | String    | ISBN buku                  | 0              | -                                      |
 | Book-Rating | Integer   | Rating (0–10)              | 0              | Rating < 6 tidak digunakan dalam model |
 
----
 
-## 🧹 Data Preparation
 
 ### Tahapan yang Dilakukan:
 
@@ -175,6 +177,23 @@ data_merged = ratings.merge(books, on='ISBN').merge(users, on='User-ID')
 ---
 
 ## 🧠 Modeling
+
+### 🧠 Konsep Kerja Model Collaborative Filtering Neural Network
+
+Model bekerja dengan cara **mempelajari representasi tersembunyi (latent features)** dari user dan buku dalam bentuk vektor (embedding).  
+Prosesnya:
+
+1. **User dan Buku** dikodekan ke dalam indeks numerik
+2. Model menggunakan **Embedding Layer** untuk menerjemahkan indeks menjadi vektor berdimensi tetap (misal 50)
+3. Vektor user dan buku kemudian dikalikan (dot product), yang mencerminkan sejauh mana user kemungkinan menyukai buku
+4. Hasilnya dijumlahkan dengan bias dan diaktivasi melalui fungsi **sigmoid**, menghasilkan skor prediksi dalam rentang 0–1.
+
+```
+User ID → Embedding → Dot Product ← Embedding ← Book ID
+                             ↓
+                         Rating Prediksi (0–1)
+```
+
 
 ### Arsitektur Model RecommenderNet
 
