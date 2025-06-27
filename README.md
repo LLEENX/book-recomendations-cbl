@@ -172,6 +172,7 @@ plt.xlabel('epoch')
 plt.legend(['train', 'validation'], loc='upper left')
 plt.show()
 ```
+![image](https://github.com/user-attachments/assets/21364825-443a-41ea-a2cc-635aabc42e3a)
 
 ---
 
