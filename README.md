@@ -36,43 +36,102 @@ Dalam proyek ini, digunakan dua pendekatan sistem rekomendasi:
 
 ### Struktur Dataset dan Statistik Umum
 
-Dataset yang digunakan terdiri dari tiga file utama:
+#### 📁 Dataset Overview
 
-- `books.csv`: 271.360 baris
-- `ratings.csv`: 1.149.780 baris
-- `users.csv`: 278.858 baris
+Dalam proyek ini digunakan tiga dataset utama dari Kaggle - Book Recommendation Dataset:
 
----
-
-📎 **Sumber Data**:  
-[🔗 Kaggle - Book Recommendation Dataset](https://www.kaggle.com/datasets/saurabhbagchi/books-dataset)
-
-### Variabel Penting
-
-- **books.csv**
-  - ISBN (string): kode unik buku
-  - Book-Title (string)
-  - Book-Author (string)
-  - Year-Of-Publication (integer)
-  - Publisher (string)
-
-- **ratings.csv**
-  - User-ID (integer)
-  - ISBN (string)
-  - Book-Rating (integer, rentang 0–10)
-
-- **users.csv**
-  - User-ID (integer)
-  - Location (string)
-  - Age (float)
+| Dataset	  | Jumlah Baris |  Jumlah Kolom |	         Deskripsi Singkat              |
+|-------------|--------------|---------------|------------------------------------------|
+| books.csv	  | 271.360      |	    8	      | Informasi metadata buku                  |
+| users.csv	  | 278.858	     |       3	      | Informasi dasar pengguna                 |
+| ratings.csv | 1.149.780    |	    3	      | Rating buku yang diberikan oleh pengguna |
 
 ---
 
-## 🔍 Pemeriksaan Struktur Data
+### 📘 Dataset: `books.csv`
 
-- **books.csv**: 271.360 baris, sebagian kecil kolom `Book-Author` dan `Publisher` memiliki missing values.
-- **users.csv**: 278.858 pengguna, kolom `Age` memiliki banyak missing dan outlier.
-- **ratings.csv**: 1.149.780 data rating, lengkap dan konsisten.
+#### 🔍 Struktur Kolom dan Penjelasan
+
+| Fitur               | Tipe Data | Deskripsi                                              |
+|---------------------|-----------|---------------------------------------------------------|
+| ISBN                | String    | Kode unik untuk setiap buku                            |
+| Book-Title          | String    | Judul buku                                             |
+| Book-Author         | String    | Nama penulis buku                                      |
+| Year-Of-Publication | Object    | Tahun buku diterbitkan                                 |
+| Publisher           | String    | Nama penerbit                                          |
+| Image-URL-S         | String    | URL gambar ukuran kecil (tidak digunakan)              |
+| Image-URL-M         | String    | URL gambar ukuran sedang (tidak digunakan)             |
+| Image-URL-L         | String    | URL gambar ukuran besar (tidak digunakan)              |
+
+#### 🧹 Kondisi Data
+
+- **Missing Values**:
+  - `Book-Author`: 2 nilai kosong → diisi dengan `'Unknown'`
+  - `Publisher`: 2 nilai kosong → diisi berdasarkan hasil pencarian ISBN
+  - `Image-URL-L`: 3 nilai kosong → dihapus karena tidak digunakan
+
+- **Outlier**:
+  - `Year-Of-Publication`: Terdapat nilai tidak logis seperti `0`, `2050+`  
+    → dihapus jika di luar rentang `[1000, 2025]`
+
+- **Duplikat**:
+  - Tidak ditemukan duplikat ISBN
+
+- **Fitur yang Dihapus**:
+  - `Image-URL-S`, `Image-URL-M`, `Image-URL-L`
+
+---
+
+### 👤 Dataset: `users.csv`
+
+#### 🔍 Struktur Kolom dan Penjelasan
+
+| Fitur     | Tipe Data | Deskripsi                                                       |
+|-----------|-----------|------------------------------------------------------------------|
+| User-ID   | Integer   | ID unik untuk tiap pengguna                                     |
+| Location  | String    | Lokasi pengguna (bisa berupa kota, negara, atau hanya ‘unknown’) |
+| Age       | Float     | Usia pengguna (dalam tahun)                                     |
+
+#### 🧹 Kondisi Data
+
+- **Missing Values**:
+  - `Age`: ±110.000 missing / outlier  
+    → usia `< 5` atau `> 90` diganti `NaN` → diisi dengan **mean usia valid**
+
+- **Outlier**:
+  - Nilai usia yang ekstrem seperti `1`, `250` → dibuang
+
+- **Duplikat**:
+  - Tidak ada
+
+- **Fitur yang Dipertahankan**:
+  - Semua fitur digunakan setelah dibersihkan
+
+---
+
+### ⭐ Dataset: `ratings.csv`
+
+#### 🔍 Struktur Kolom dan Penjelasan
+
+| Fitur       | Tipe Data | Deskripsi                                                         |
+|-------------|-----------|--------------------------------------------------------------------|
+| User-ID     | Integer   | ID pengguna yang memberi rating                                   |
+| ISBN        | String    | Kode unik buku yang diberi rating                                |
+| Book-Rating | Integer   | Nilai rating dari pengguna terhadap buku (rentang nilai: 0–10)    |
+
+#### 🧹 Kondisi Data
+
+- **Missing Values**: Tidak ada
+- **Outlier**: Tidak ditemukan
+
+- **Distribusi Rating**:
+  - Banyak rating bernilai `0` → kemungkinan representasi *implicit feedback*
+  - Rating dinormalisasi ke rentang **0–1** untuk keperluan pelatihan model neural network
+
+- **Duplikat**:
+  - Ada pengguna yang memberi rating ke buku yang sama → **valid** (karena pengguna bisa menilai beberapa kali)
+
+---
 
 ### 📊 Statistik Jumlah Data
 
@@ -117,6 +176,98 @@ df['book'] = df['bookID'].map(book_to_book_encoded)
    - 80% untuk pelatihan, 20% untuk validasi
 
 ### ✅ Penjelasan Detail Fitur & Kualitas Data
+
+#### 👤 users.csv
+
+| Fitur     | Tipe Data | Keterangan               | Missing Values | Outlier / Catatan                        |
+|-----------|-----------|--------------------------|----------------|------------------------------------------|
+| User-ID   | Integer   | ID unik pengguna         | 0              | -                                        |
+| Location  | String    | Lokasi pengguna          | 0              | Banyak nilai generik seperti “unknown”   |
+| Age       | Float     | Usia pengguna            | 0              | Banyak outlier (`< 5` dan `> 90`)        |
+
+> **Tindakan**: Nilai `Age < 5` atau `> 90` diubah menjadi NaN, kemudian diimputasi dengan rata-rata.
+
+### Grafik Distribusi Usia/(`Age`) Pengguna
+![image](https://github.com/user-attachments/assets/f88f4c28-7181-4c3c-af6f-213135e4fae0)
+
+Dalam grafik tersebut dapat diketahui terdapat nilai yang tidak wajar di dalam data kolom `Age`.
+
+### 📈 Statistik Deskriptif Age:
+
+```python
+
+users['Age'].describe()
+users['Age'].value_counts().sort_index()
+
+```
+
+```text
+count    278858.000000
+mean         34.432926
+std          10.512758
+min           5.000000
+25%          29.000000
+50%          34.000000
+75%          35.000000
+max          90.000000
+```
+⚠️ Terdapat data yang tidak wajar sebelumnya di mana usia pengguna kurang dari 5 tahun atau lebih dari 90 tahun.
+Nilai usia <5 dan >90 diduga hasil kesalahan input (misal: default value 0, typo, dll), sehingga tidak masuk akal secara statistik dan konteks pengguna buku.
+
+### 🧼 Penanganan Nilai Kosong dan Outlier pada Kolom `Age`
+
+Salah satu fitur penting dalam `users.csv` adalah kolom **Age**. Namun, kolom ini memiliki banyak **nilai kosong dan outlier** yang perlu dibersihkan agar tidak mengganggu hasil pemodelan.
+
+Langkah-langkah yang dilakukan:
+
+1. Menampilkan distribusi awal nilai unik pada kolom `Age`
+2. Mengidentifikasi **usia tidak logis**: <5 tahun dan >90 tahun
+3. Mengganti nilai tidak logis menjadi `NaN`
+4. Mengisi nilai `NaN` dengan **rata-rata usia valid**
+5. Mengubah tipe data kolom `Age` dari float ke **integer** agar efisien
+
+```python
+# Identifikasi nilai tidak logis
+users['Age'] = users['Age'].apply(lambda x: np.nan if x < 5 or x > 90 else x)
+
+# Imputasi nilai kosong dengan rata-rata
+users['Age'].fillna(users['Age'].mean(), inplace=True)
+
+# Ubah tipe data ke integer
+users['Age'] = users['Age'].astype(int)
+```
+---
+
+### 🔢 Mengubah Tipe Data ke Integer
+Setelah nilai usia dibersihkan dan tidak lagi mengandung nilai kosong, kita ubah tipe data dari float ke integer (int). Hal ini dilakukan agar kolom Age lebih sesuai untuk interpretasi dan efisien dalam penyimpanan memori.
+
+```python
+
+# Ubah tipe data Age ke integer
+user_cleaned['Age'] = user_cleaned['Age'].astype(int)
+
+# Tampilkan nilai unik setelah dibersihkan
+print("Nilai unik Age (setelah dibersihkan):")
+print(sorted(user_cleaned['Age'].unique()))
+
+```
+---
+
+### 🔢 Informasi Struktur Kolom users Setelah Dibersihkan
+
+```
+<class 'pandas.core.frame.DataFrame'>
+RangeIndex: 278858 entries, 0 to 278857
+Data columns (total 3 columns):
+ #   Column    Non-Null Count   Dtype 
+---  ------    --------------   ----- 
+ 0   User-ID   278858 non-null  int64 
+ 1   Location  278858 non-null  object
+ 2   Age       278858 non-null  int64
+```
+
+---
+
 
 #### 📘 books.csv
 
@@ -325,96 +476,6 @@ Sekarang data buku sudah bersih.
 
 ---
 
-#### 👤 users.csv
-
-| Fitur     | Tipe Data | Keterangan               | Missing Values | Outlier / Catatan                        |
-|-----------|-----------|--------------------------|----------------|------------------------------------------|
-| User-ID   | Integer   | ID unik pengguna         | 0              | -                                        |
-| Location  | String    | Lokasi pengguna          | 0              | Banyak nilai generik seperti “unknown”   |
-| Age       | Float     | Usia pengguna            | 0              | Banyak outlier (`< 5` dan `> 90`)        |
-
-> **Tindakan**: Nilai `Age < 5` atau `> 90` diubah menjadi NaN, kemudian diimputasi dengan rata-rata.
-
-### Grafik Distribusi Usia/(`Age`) Pengguna
-![image](https://github.com/user-attachments/assets/f88f4c28-7181-4c3c-af6f-213135e4fae0)
-
-Dalam grafik tersebut dapat diketahui terdapat nilai yang tidak wajar di dalam data kolom `Age`.
-
-### 📈 Statistik Deskriptif Age:
-
-```python
-
-users['Age'].describe()
-users['Age'].value_counts().sort_index()
-
-```
-
-```text
-count    278858.000000
-mean         34.432926
-std          10.512758
-min           5.000000
-25%          29.000000
-50%          34.000000
-75%          35.000000
-max          90.000000
-```
-⚠️ Terdapat data yang tidak wajar sebelumnya di mana usia pengguna kurang dari 5 tahun atau lebih dari 90 tahun.
-Nilai usia <5 dan >90 diduga hasil kesalahan input (misal: default value 0, typo, dll), sehingga tidak masuk akal secara statistik dan konteks pengguna buku.
-
-### 🧼 Penanganan Nilai Kosong dan Outlier pada Kolom `Age`
-
-Salah satu fitur penting dalam `users.csv` adalah kolom **Age**. Namun, kolom ini memiliki banyak **nilai kosong dan outlier** yang perlu dibersihkan agar tidak mengganggu hasil pemodelan.
-
-Langkah-langkah yang dilakukan:
-
-1. Menampilkan distribusi awal nilai unik pada kolom `Age`
-2. Mengidentifikasi **usia tidak logis**: <5 tahun dan >90 tahun
-3. Mengganti nilai tidak logis menjadi `NaN`
-4. Mengisi nilai `NaN` dengan **rata-rata usia valid**
-5. Mengubah tipe data kolom `Age` dari float ke **integer** agar efisien
-
-```python
-# Identifikasi nilai tidak logis
-users['Age'] = users['Age'].apply(lambda x: np.nan if x < 5 or x > 90 else x)
-
-# Imputasi nilai kosong dengan rata-rata
-users['Age'].fillna(users['Age'].mean(), inplace=True)
-
-# Ubah tipe data ke integer
-users['Age'] = users['Age'].astype(int)
-```
----
-
-### 🔢 Mengubah Tipe Data ke Integer
-Setelah nilai usia dibersihkan dan tidak lagi mengandung nilai kosong, kita ubah tipe data dari float ke integer (int). Hal ini dilakukan agar kolom Age lebih sesuai untuk interpretasi dan efisien dalam penyimpanan memori.
-
-```python
-
-# Ubah tipe data Age ke integer
-user_cleaned['Age'] = user_cleaned['Age'].astype(int)
-
-# Tampilkan nilai unik setelah dibersihkan
-print("Nilai unik Age (setelah dibersihkan):")
-print(sorted(user_cleaned['Age'].unique()))
-
-```
----
-
-### 🔢 Informasi Struktur Kolom users Setelah Dibersihkan
-
-```
-<class 'pandas.core.frame.DataFrame'>
-RangeIndex: 278858 entries, 0 to 278857
-Data columns (total 3 columns):
- #   Column    Non-Null Count   Dtype 
----  ------    --------------   ----- 
- 0   User-ID   278858 non-null  int64 
- 1   Location  278858 non-null  object
- 2   Age       278858 non-null  int64
-```
-
----
 
 #### ⭐ ratings.csv
 
@@ -637,29 +698,32 @@ history = model.fit(
 
 ## 📌 Hasil Top-N Recommendation
 
-### 📚 Menampilkan Rekomendasi untuk User ID: `92979`
+### 📚 Menampilkan Rekomendasi untuk User ID: `8890`
 
 ---
 
 ### 📘 Buku yang Sebelumnya Diberi Rating Tinggi:
 
-- *A Yellow Raft in Blue Water* — oleh **Michael Dorris**
-- *More Headlines* — oleh **Jay Leno**
+- *Novecento : Pianiste* - oleh **Alessandro Baricco**
+- *Desert (Folio Ser .: No 1670)* - oleh **J. M. Le Clezio**
+- *Les cinq sens (Philosophie des corps mÃªlÃ©s)* - oleh **Michel Serres**
+- *Roman avec cocaÃ?Â¯ne* - oleh **M AguÃ?Â©ev**
+- *Mr Vertigo* - oleh **Paul Auster**
 
 ---
 
 ### 📗 10 Buku yang Direkomendasikan:
 
-1. *The Boy Next Door* — oleh **Meggin Cabot**
-2. *Harold and the Purple Crayon* — oleh **Crockett Johnson**
-3. *I Am Legend* — oleh **Richard Matheson**
-4. *Secrets of the Vine Devotional* — oleh **Bruce Wilkinson**
-5. *The Door into Summer* — oleh **Robert A. Heinlein**
-6. *Live Albom* — oleh **Mitch Albom**
-7. *The Vampire Lestat* — oleh **Anne Rice**
-8. *Flashback* — oleh **Nevada Barr**
-9. *The Collected Stories* — oleh **Isaac Bashevis Singer**
-10. *Curanderismo: Mexican American Folk Healing* — oleh **Robert T. Trotter**
+1. *The Bonesetter's Daughter* - **oleh Amy Tan**
+2. *Angels &amp; Demons* - oleh **Dan Brown**
+3. *Charlotte's Web (Trophy Newbery)* - oleh **E. B. White**
+4. *Falling Angels* - oleh **Tracy Chevalier**
+5. *Timeline* - oleh **MICHAEL CRICHTON**
+6. *Ender's Game (Ender Wiggins Saga (Paperback))* - oleh **Orson Scott Card**
+7. *The House of the Spirits* - oleh **Isabel Allende**
+8. *The Other Boleyn Girl* - oleh **Philippa Gregory**
+9. *Gone with the Wind* - oleh **Margaret Mitchell**
+10. *Anne of Avonlea (Anne of Green Gables Novels (Paperback))* - oleh **L.M. MONTGOMERY**
 
 ---
 
@@ -686,7 +750,7 @@ plt.xlabel('epoch')
 plt.legend(['train', 'validation'], loc='upper left')
 plt.show()
 ```
-![image](https://github.com/user-attachments/assets/0a01618e-4224-4413-a0bd-95e399cd0036)
+![image](https://github.com/user-attachments/assets/a2c4dbc8-e344-49a0-9233-5471d271a816)
 
 
 ---
@@ -705,10 +769,10 @@ RMSE digunakan untuk mengukur seberapa besar perbedaan antara prediksi model den
 
 ## 📊 Interpretasi Evaluasi
 
-| Metrik           | Nilai   | Penjelasan                               |
-|------------------|---------|------------------------------------------|
-| RMSE (Training)  | ~0.019  | Cukup rendah (rating distandarisasi 0–1)|
-| RMSE (Validation)| ~0.310  | Konsisten, tidak overfitting            |
+| Metrik           | Nilai    | Penjelasan                               |
+|------------------|----------|------------------------------------------|
+| RMSE (Training)  | ~0.0649  | Cukup rendah (rating distandarisasi 0–1) |
+| RMSE (Validation)| ~0.3003  | Konsisten, tidak overfitting             |
 
 Model stabil dan mampu mempelajari preferensi pengguna dengan cukup baik.
 
@@ -727,8 +791,6 @@ Model stabil dan mampu mempelajari preferensi pengguna dengan cukup baik.
 ratings = model.predict(user_book_array)
 top_ratings_indices = ratings.argsort()[-10:][::-1]
 ```
-
----
 
 ---
 
