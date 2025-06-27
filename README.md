@@ -126,8 +126,6 @@ Dataset yang digunakan terdiri dari tiga file utama:
 
 ## 🧹 Data Preparation
 
-## 🧹 Data Preparation
-
 ### Tahapan yang Dilakukan:
 
 1. **Hapus Fitur Tidak Relevan**
