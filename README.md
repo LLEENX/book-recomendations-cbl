@@ -93,16 +93,96 @@ Dataset yang digunakan terdiri dari tiga file utama:
 
 #### 📘 books.csv
 
-| Fitur               | Tipe Data | Keterangan                              | Missing Values | Outlier / Catatan                           |
+| Fitur               | Tipe Data | Keterangan                               | Missing Values | Outlier / Catatan                           |
 |---------------------|-----------|------------------------------------------|----------------|---------------------------------------------|
-| ISBN                | String    | Kode unik buku                          | 0              | -                                           |
+| ISBN                | String    | Kode unik buku                           | 0              | -                                           |
 | Book-Title          | String    | Judul buku                               | 0              | -                                           |
-| Book-Author         | String    | Nama penulis                             | 1.877          | Diisi manual jika memungkinkan              |
+| Book-Author         | String    | Nama penulis                             | 2              | Diisi manual jika memungkinkan              |
 | Year-Of-Publication | Integer   | Tahun terbit                             | 1              | Ada data tidak logis seperti `0`, `2050+`   |
-| Publisher           | String    | Nama penerbit                            | 3.711          | Dilengkapi secara manual atau di-drop       |
-| Image-URL(s)        | String    | Link gambar sampul buku                  | Banyak         | Diabaikan karena tidak digunakan            |
+| Publisher           | String    | Nama penerbit                            | 2              | Dilengkapi secara manual atau di-drop       |
+| Image-URL(s)        | String    | Link gambar sampul buku                  | 3              | Diabaikan karena tidak digunakan            |
 
 > **Tindakan**: Kolom `Image-URL` dihapus, nilai kosong pada `Publisher` diisi manual, tahun tidak valid dihapus.
+
+#### 🧼 Pembersihan Data pada books.csv
+Dataset books.csv memiliki 271.360 entri. Berikut hasil inspeksi awal menggunakan books.info():
+```
+<class 'pandas.core.frame.DataFrame'>
+RangeIndex: 271360 entries, 0 to 271359
+Data columns (total 8 columns):
+ #   Column               Non-Null Count   Dtype 
+---  ------               --------------   ----- 
+ 0   ISBN                 271360 non-null  object
+ 1   Book-Title           271360 non-null  object
+ 2   Book-Author          271358 non-null  object
+ 3   Year-Of-Publication  271360 non-null  object
+ 4   Publisher            271358 non-null  object
+ 5   Image-URL-S          271360 non-null  object
+ 6   Image-URL-M          271360 non-null  object
+ 7   Image-URL-L          271357 non-null  object
+
+```
+
+#### 🔍 Cek Nilai Kosong
+
+```python
+books.isnull().sum()
+```
+Hasil:
+![image](https://github.com/user-attachments/assets/085a1277-38af-459c-a808-edb1b5c60a99)
+
+Dari gambar dapat diketahui bahwa ada beberapa kolom yang memiliki nilai kosong didalamnya yaitu, `Book-Author`, `Publisher`, dan `Image-URL-L`.
+
+#### ✂️ Menghapus Kolom Gambar
+Kolom `Image-URL-S`, `Image-URL-M`, dan I`mage-URL-L` berisi tautan gambar buku yang tidak digunakan dalam sistem rekomendasi, sehingga dihapus untuk menyederhanakan data.
+
+```python
+books_cleaned = books.copy()
+books_cleaned.drop(['Image-URL-S', 'Image-URL-M', 'Image-URL-L'], axis=1, inplace=True)
+```
+
+#### 🖊️ Menangani Missing Value pada Book-Author
+Terdapat 2 baris yang memiliki nilai kosong pada kolom Book-Author. Solusinya:
+- Jika ISBN ditemukan pada baris lain dengan nilai Book-Author yang valid, maka nilai diambil dari sana
+- Jika tidak ditemukan, nilai akan diisi dengan 'Unknown'
+
+```python
+missing_authors = books_cleaned[books_cleaned['Book-Author'].isnull()]
+
+for idx in missing_authors.index:
+    isbn = books_cleaned.loc[idx, 'ISBN']
+    same_isbn = books_cleaned[(books_cleaned['ISBN'] == isbn) & (books_cleaned['Book-Author'].notnull())]
+    if not same_isbn.empty:
+        books_cleaned.loc[idx, 'Book-Author'] = same_isbn.iloc[0]['Book-Author']
+    else:
+        books_cleaned.loc[idx, 'Book-Author'] = 'Unknown'
+```
+
+Sayangnya tidak ditemukan nama Author dari kedua data tersebut, oleh karena itu kedua data yang tidak memiliki Author diberi nilai 'Unknown'
+
+#### 🏷️ Menangani Missing Value pada Publisher
+Ditemukan 2 baris dengan nilai kosong di kolom Publisher. Nilai ini diisi secara manual berdasarkan hasil pencarian informasi ISBN dari situs eksternal seperti Amazon:
+- ISBN 193169656X → NovelBooks, Inc.
+- ISBN 1931696993 → CreateSpace Independent Publishing Platform
+
+```python
+
+books_cleaned.loc[books_cleaned['ISBN'] == '193169656X', 'Publisher'] = 'NovelBooks, Inc.'
+books_cleaned.loc[books_cleaned['ISBN'] == '1931696993', 'Publisher'] = 'CreateSpace Independent Publishing Platform'
+
+```
+
+Kedua baris tersebut diisi secara manual berdasarkan hasil pencarian ISBN dari situs eksternal (seperti Amazon). Kita gunakan metode .loc[] untuk menyasar ISBN tertentu dan mengisi kolom Publisher yang kosong dengan data yang benar.
+
+#### Cek kembali nilai data book yang kosong
+
+```python
+# Cek jumlah nilai kosong di setiap kolom
+books_cleaned.isnull().sum()
+```
+![image](https://github.com/user-attachments/assets/a2b780dc-fded-46c1-b7c7-e6aa36e0bd8c)
+
+Data buku sekarang sudah bersih.
 
 ---
 
@@ -112,9 +192,36 @@ Dataset yang digunakan terdiri dari tiga file utama:
 |-----------|-----------|--------------------------|----------------|------------------------------------------|
 | User-ID   | Integer   | ID unik pengguna         | 0              | -                                        |
 | Location  | String    | Lokasi pengguna          | 0              | Banyak nilai generik seperti “unknown”   |
-| Age       | Float     | Usia pengguna            | 110.761        | Banyak outlier (`< 5` dan `> 90`)        |
+| Age       | Float     | Usia pengguna            | 0              | Banyak outlier (`< 5` dan `> 90`)        |
 
 > **Tindakan**: Nilai `Age < 5` atau `> 90` diubah menjadi NaN, kemudian diimputasi dengan rata-rata.
+
+### Grafik Distribusi Usia/(`Age`) Pengguna
+![image](https://github.com/user-attachments/assets/f88f4c28-7181-4c3c-af6f-213135e4fae0)
+
+Dalam grafik tersebut dapat diketahui terdapat nilai yang tidak wajar di dalam data kolom `Age`.
+
+### 📈 Statistik Deskriptif Age:
+
+```python
+
+users['Age'].describe()
+users['Age'].value_counts().sort_index()
+
+```
+
+```text
+count    278858.000000
+mean         34.432926
+std          10.512758
+min           5.000000
+25%          29.000000
+50%          34.000000
+75%          35.000000
+max          90.000000
+```
+⚠️ Terdapat data yang tidak wajar sebelumnya di mana usia pengguna kurang dari 5 tahun atau lebih dari 90 tahun.
+Nilai usia <5 dan >90 diduga hasil kesalahan input (misal: default value 0, typo, dll), sehingga tidak masuk akal secara statistik dan konteks pengguna buku.
 
 ### 🧼 Penanganan Nilai Kosong dan Outlier pada Kolom `Age`
 
@@ -138,20 +245,19 @@ users['Age'].fillna(users['Age'].mean(), inplace=True)
 # Ubah tipe data ke integer
 users['Age'] = users['Age'].astype(int)
 ```
+🔢 Mengubah Tipe Data ke Integer
+Setelah nilai usia dibersihkan dan tidak lagi mengandung nilai kosong, kita ubah tipe data dari float ke integer (int). Hal ini dilakukan agar kolom Age lebih sesuai untuk interpretasi dan efisien dalam penyimpanan memori.
 
-### 📈 Statistik Deskriptif Setelah Pembersihan:
+```python
 
-```text
-count    278858.000000
-mean         34.432926
-std          10.512758
-min           5.000000
-25%          29.000000
-50%          34.000000
-75%          35.000000
-max          90.000000
+# Ubah tipe data Age ke integer
+user_cleaned['Age'] = user_cleaned['Age'].astype(int)
+
+# Tampilkan nilai unik setelah dibersihkan
+print("Nilai unik Age (setelah dibersihkan):")
+print(sorted(user_cleaned['Age'].unique()))
+
 ```
-⚠️ Terdapat data yang tidak wajar sebelumnya di mana usia pengguna kurang dari 5 tahun atau lebih dari 90 tahun. Kini telah dibersihkan.
 
 🔢 Informasi Struktur Kolom users Setelah Dibersihkan
 
@@ -175,9 +281,6 @@ Data columns (total 3 columns):
 | User-ID     | Integer   | ID pengguna                | 0              | -                                      |
 | ISBN        | String    | ISBN buku                  | 0              | -                                      |
 | Book-Rating | Integer   | Rating (0–10)              | 0              | Rating < 6 tidak digunakan dalam model |
-
-
-![image](https://github.com/user-attachments/assets/f88f4c28-7181-4c3c-af6f-213135e4fae0)
 
 
 
