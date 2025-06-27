@@ -53,7 +53,7 @@ Dalam proyek ini digunakan tiga dataset utama dari Kaggle - Book Recommendation 
 #### 🔍 Struktur Kolom dan Penjelasan
 
 | Fitur               | Tipe Data | Deskripsi                                              |
-|---------------------|-----------|---------------------------------------------------------|
+|---------------------|-----------|--------------------------------------------------------|
 | ISBN                | String    | Kode unik untuk setiap buku                            |
 | Book-Title          | String    | Judul buku                                             |
 | Book-Author         | String    | Nama penulis buku                                      |
@@ -64,6 +64,29 @@ Dalam proyek ini digunakan tiga dataset utama dari Kaggle - Book Recommendation 
 | Image-URL-L         | String    | URL gambar ukuran besar (tidak digunakan)              |
 
 #### 🧹 Kondisi Data
+
+#### 🔍 Cek Nilai Kosong
+
+```python
+books.isnull().sum()
+```
+Hasil:
+
+![image](https://github.com/user-attachments/assets/085a1277-38af-459c-a808-edb1b5c60a99)
+
+Dari gambar dapat diketahui bahwa ada beberapa kolom yang memiliki nilai kosong didalamnya yaitu, `Book-Author`, `Publisher`, dan `Image-URL-L`.
+
+
+| Fitur               | Tipe Data | Keterangan                               | Missing Values | Outlier / Catatan                           |
+|---------------------|-----------|------------------------------------------|----------------|---------------------------------------------|
+| ISBN                | String    | Kode unik buku                           | 0              | -                                           |
+| Book-Title          | String    | Judul buku                               | 0              | -                                           |
+| Book-Author         | String    | Nama penulis                             | 2              | Diisi manual jika memungkinkan              |
+| Year-Of-Publication | Object    | Tahun terbit                             | 1              | Ada data tidak logis seperti `0`, `2050+`   |
+| Publisher           | String    | Nama penerbit                            | 2              | Dilengkapi secara manual atau di-drop       |
+| Image-URL(s)        | String    | Link gambar sampul buku                  | 3              | Diabaikan karena tidak digunakan            |
+
+> **Tindakan**: Kolom `Image-URL` dihapus, nilai kosong pada `Publisher` diisi manual, sedangkan pada `Book-Author` akan dianalisis apabila ketemu nama author buku maka akan diisi manual jika tidak akan diisi dengan `'Unknown'`, tahun tidak valid dihapus.
 
 - **Missing Values**:
   - `Book-Author`: 2 nilai kosong → diisi dengan `'Unknown'`
@@ -80,26 +103,75 @@ Dalam proyek ini digunakan tiga dataset utama dari Kaggle - Book Recommendation 
 - **Fitur yang Dihapus**:
   - `Image-URL-S`, `Image-URL-M`, `Image-URL-L`
 
+### Kolom Year-Of-Publication
+
+```python
+books_cleaned.info()
+```
+
+```
+<class 'pandas.core.frame.DataFrame'>
+RangeIndex: 271360 entries, 0 to 271359
+Data columns (total 5 columns):
+ #   Column               Non-Null Count   Dtype 
+---  ------               --------------   ----- 
+ 0   ISBN                 271360 non-null  object
+ 1   Book-Title           271360 non-null  object
+ 2   Book-Author          271360 non-null  object
+ 3   Year-Of-Publication  271360 non-null  object
+ 4   Publisher            271360 non-null  object
+dtypes: object(5)
+memory usage: 10.4+ MB
+```
+Kolom Year-Of-Publication saat ini masih bertipe object (teks), padahal seharusnya berupa angka. Beberapa nilai bahkan mengandung teks seperti nama penerbit.
+
+Pada proses data preparation saya akan melakukan beberapa hal:
+- Menyaring data yang valid (angka).
+- Mengubah nilai tahun ke tipe int.
+- Mengganti nilai tidak valid (misalnya tahun < 1000 atau > 2025) dengan NaN, lalu imputasi menggunakan modus (tahun terbanyak).
+
 ---
 
 ### 👤 Dataset: `users.csv`
 
 #### 🔍 Struktur Kolom dan Penjelasan
 
-| Fitur     | Tipe Data | Deskripsi                                                       |
+| Fitur     | Tipe Data | Deskripsi                                                        |
 |-----------|-----------|------------------------------------------------------------------|
-| User-ID   | Integer   | ID unik untuk tiap pengguna                                     |
+| User-ID   | Integer   | ID unik untuk tiap pengguna                                      |
 | Location  | String    | Lokasi pengguna (bisa berupa kota, negara, atau hanya ‘unknown’) |
-| Age       | Float     | Usia pengguna (dalam tahun)                                     |
+| Age       | Float     | Usia pengguna (dalam tahun)                                      |
 
 #### 🧹 Kondisi Data
+
+| Fitur     | Tipe Data | Keterangan               | Missing Values | Outlier / Catatan                        |
+|-----------|-----------|--------------------------|----------------|------------------------------------------|
+| User-ID   | Integer   | ID unik pengguna         | 0              | -                                        |
+| Location  | String    | Lokasi pengguna          | 0              | Banyak nilai generik seperti “unknown”   |
+| Age       | Float     | Usia pengguna            | 0              | Banyak outlier (`< 5` dan `> 90`)        |
+
+> **Tindakan**: Nilai `Age < 5` atau `> 90` diubah menjadi NaN, kemudian diimputasi dengan rata-rata.
+
+### Grafik Distribusi Usia/(`Age`) Pengguna
+![image](https://github.com/user-attachments/assets/f88f4c28-7181-4c3c-af6f-213135e4fae0)
+
+Dalam grafik tersebut dapat diketahui terdapat nilai yang tidak wajar di dalam data kolom `Age`.
+
+### 📈 Statistik Deskriptif Age:
+
+```python
+
+users['Age'].describe()
+users['Age'].value_counts().sort_index()
+
+```
 
 - **Missing Values**:
   - `Age`: ±110.000 missing / outlier  
     → usia `< 5` atau `> 90` diganti `NaN` → diisi dengan **mean usia valid**
 
 - **Outlier**:
-  - Nilai usia yang ekstrem seperti `1`, `250` → dibuang
+  - Nilai usia yang ekstrem seperti `0`, `100` → dibuang
 
 - **Duplikat**:
   - Tidak ada
@@ -113,19 +185,27 @@ Dalam proyek ini digunakan tiga dataset utama dari Kaggle - Book Recommendation 
 
 #### 🔍 Struktur Kolom dan Penjelasan
 
-| Fitur       | Tipe Data | Deskripsi                                                         |
+| Fitur       | Tipe Data | Deskripsi                                                          |
 |-------------|-----------|--------------------------------------------------------------------|
-| User-ID     | Integer   | ID pengguna yang memberi rating                                   |
-| ISBN        | String    | Kode unik buku yang diberi rating                                |
-| Book-Rating | Integer   | Nilai rating dari pengguna terhadap buku (rentang nilai: 0–10)    |
+| User-ID     | Integer   | ID pengguna yang memberi rating                                    |
+| ISBN        | String    | Kode unik buku yang diberi rating                                  |
+| Book-Rating | Integer   | Nilai rating dari pengguna terhadap buku (rentang nilai: 0–10)     |
 
 #### 🧹 Kondisi Data
+
+| Fitur       | Tipe Data | Keterangan                 | Missing Values | Catatan                                |
+|-------------|-----------|----------------------------|----------------|----------------------------------------|
+| User-ID     | Integer   | ID pengguna                | 0              | -                                      |
+| ISBN        | String    | ISBN buku                  | 0              | -                                      |
+| Book-Rating | Integer   | Rating (0–10)              | 0              | Rating < 6 tidak digunakan dalam model |
+
 
 - **Missing Values**: Tidak ada
 - **Outlier**: Tidak ditemukan
 
 - **Distribusi Rating**:
   - Banyak rating bernilai `0` → kemungkinan representasi *implicit feedback*
+  - Nantinya berencana hanya mengambil rating >= 6 yang digunakan untuk model rekomendasi
   - Rating dinormalisasi ke rentang **0–1** untuk keperluan pelatihan model neural network
 
 - **Duplikat**:
@@ -175,31 +255,9 @@ df['book'] = df['bookID'].map(book_to_book_encoded)
 7. **Split Data**
    - 80% untuk pelatihan, 20% untuk validasi
 
-### ✅ Penjelasan Detail Fitur & Kualitas Data
+---
 
 #### 👤 users.csv
-
-| Fitur     | Tipe Data | Keterangan               | Missing Values | Outlier / Catatan                        |
-|-----------|-----------|--------------------------|----------------|------------------------------------------|
-| User-ID   | Integer   | ID unik pengguna         | 0              | -                                        |
-| Location  | String    | Lokasi pengguna          | 0              | Banyak nilai generik seperti “unknown”   |
-| Age       | Float     | Usia pengguna            | 0              | Banyak outlier (`< 5` dan `> 90`)        |
-
-> **Tindakan**: Nilai `Age < 5` atau `> 90` diubah menjadi NaN, kemudian diimputasi dengan rata-rata.
-
-### Grafik Distribusi Usia/(`Age`) Pengguna
-![image](https://github.com/user-attachments/assets/f88f4c28-7181-4c3c-af6f-213135e4fae0)
-
-Dalam grafik tersebut dapat diketahui terdapat nilai yang tidak wajar di dalam data kolom `Age`.
-
-### 📈 Statistik Deskriptif Age:
-
-```python
-
-users['Age'].describe()
-users['Age'].value_counts().sort_index()
-
-```
 
 ```text
 count    278858.000000
@@ -268,54 +326,9 @@ Data columns (total 3 columns):
 
 ---
 
-
 #### 📘 books.csv
 
-| Fitur               | Tipe Data | Keterangan                               | Missing Values | Outlier / Catatan                           |
-|---------------------|-----------|------------------------------------------|----------------|---------------------------------------------|
-| ISBN                | String    | Kode unik buku                           | 0              | -                                           |
-| Book-Title          | String    | Judul buku                               | 0              | -                                           |
-| Book-Author         | String    | Nama penulis                             | 2              | Diisi manual jika memungkinkan              |
-| Year-Of-Publication | Integer   | Tahun terbit                             | 1              | Ada data tidak logis seperti `0`, `2050+`   |
-| Publisher           | String    | Nama penerbit                            | 2              | Dilengkapi secara manual atau di-drop       |
-| Image-URL(s)        | String    | Link gambar sampul buku                  | 3              | Diabaikan karena tidak digunakan            |
-
-> **Tindakan**: Kolom `Image-URL` dihapus, nilai kosong pada `Publisher` diisi manual, tahun tidak valid dihapus.
-
----
-
-### 🧼 Pembersihan Data pada books.csv
-Dataset books.csv memiliki 271.360 entri. Berikut hasil inspeksi awal menggunakan books.info():
-```
-<class 'pandas.core.frame.DataFrame'>
-RangeIndex: 271360 entries, 0 to 271359
-Data columns (total 8 columns):
- #   Column               Non-Null Count   Dtype 
----  ------               --------------   ----- 
- 0   ISBN                 271360 non-null  object
- 1   Book-Title           271360 non-null  object
- 2   Book-Author          271358 non-null  object
- 3   Year-Of-Publication  271360 non-null  object
- 4   Publisher            271358 non-null  object
- 5   Image-URL-S          271360 non-null  object
- 6   Image-URL-M          271360 non-null  object
- 7   Image-URL-L          271357 non-null  object
-
-```
-### 🔍 Cek Nilai Kosong
-
-```python
-books.isnull().sum()
-```
-Hasil:
-
-![image](https://github.com/user-attachments/assets/085a1277-38af-459c-a808-edb1b5c60a99)
-
-Dari gambar dapat diketahui bahwa ada beberapa kolom yang memiliki nilai kosong didalamnya yaitu, `Book-Author`, `Publisher`, dan `Image-URL-L`.
-
----
-
-### ✂️ Menghapus Kolom Gambar
+#### ✂️ Menghapus Kolom Gambar
 Kolom `Image-URL-S`, `Image-URL-M`, dan I`mage-URL-L` berisi tautan gambar buku yang tidak digunakan dalam sistem rekomendasi, sehingga dihapus untuk menyederhanakan data.
 
 ```python
@@ -324,7 +337,6 @@ books_cleaned.drop(['Image-URL-S', 'Image-URL-M', 'Image-URL-L'], axis=1, inplac
 ```
 
 ---
-
 
 ### 🖊️ Menangani Missing Value pada Book-Author
 Terdapat 2 baris yang memiliki nilai kosong pada kolom Book-Author. Solusinya:
@@ -375,34 +387,7 @@ books_cleaned.isnull().sum()
 
 ### 📅 Pembersihan Kolom Year-Of-Publication
 
-```python
-books_cleaned.info()
-```
-
-```
-<class 'pandas.core.frame.DataFrame'>
-RangeIndex: 271360 entries, 0 to 271359
-Data columns (total 5 columns):
- #   Column               Non-Null Count   Dtype 
----  ------               --------------   ----- 
- 0   ISBN                 271360 non-null  object
- 1   Book-Title           271360 non-null  object
- 2   Book-Author          271360 non-null  object
- 3   Year-Of-Publication  271360 non-null  object
- 4   Publisher            271360 non-null  object
-dtypes: object(5)
-memory usage: 10.4+ MB
-```
-Kolom Year-Of-Publication saat ini masih bertipe object (teks), padahal seharusnya berupa angka. Beberapa nilai bahkan mengandung teks seperti nama penerbit.
-
-Disini saya akan melakukan beberapa hal:
-- Menyaring data yang valid (angka).
-- Mengubah nilai tahun ke tipe int.
-- Mengganti nilai tidak valid (misalnya tahun < 1000 atau > 2025) dengan NaN, lalu imputasi menggunakan modus (tahun terbanyak).
-
----
-
-### 🔄 Mengubah kolom Year-Of-Publication
+#### 🔄 Mengubah kolom Year-Of-Publication
 
 Saya menggunakan pd.to_numeric() untuk mengubah kolom Year-Of-Publication menjadi angka (int64 atau float64).
 Parameter errors='coerce' akan mengubah data yang tidak bisa dikonversi menjadi NaN (contohnya tahun seperti 'DK Publishing Inc' atau 'Gallimard' yang kadang muncul karena kesalahan input).
@@ -411,7 +396,7 @@ Parameter errors='coerce' akan mengubah data yang tidak bisa dikonversi menjadi 
 books_cleaned['Year-Of-Publication'] = pd.to_numeric(books_cleaned['Year-Of-Publication'], errors='coerce')
 ```
 
-🔍 Cek nilai unik yang tidak realistis
+#### 🔍 Cek nilai unik yang tidak realistis
 
 ```
 print("Tahun yang tidak realistis:")
@@ -429,7 +414,7 @@ Tahun yang tidak realistis:
 ```
 ---
 
-### 🧼 Bersihkan tahun yang tidak valid
+#### 🧼 Bersihkan tahun yang tidak valid
 
 Tahun terbit buku yang valid umumnya berada antara 1000 dan 2025. Tahun di luar rentang ini dianggap tidak masuk akal dan diubah menjadi NaN agar bisa diisi nanti.
 
@@ -437,9 +422,10 @@ Tahun terbit buku yang valid umumnya berada antara 1000 dan 2025. Tahun di luar 
 # 🧼 Bersihkan tahun yang tidak valid: set jadi NaN jika < 1000 atau > 2025
 books_cleaned.loc[(books_cleaned['Year-Of-Publication'] < 1000) | (books_cleaned['Year-Of-Publication'] > 2025), 'Year-Of-Publication'] = np.nan
 ```
+
 ---
 
-### 🧮 Isi nilai NaN dengan median tahun yang valid
+#### 🧮 Isi nilai NaN dengan median tahun yang valid
 
 ```
 # 🧮 Isi nilai NaN dengan median tahun yang valid
@@ -473,18 +459,6 @@ memory usage: 10.4+ MB
 ```
 
 Sekarang data buku sudah bersih.
-
----
-
-
-#### ⭐ ratings.csv
-
-| Fitur       | Tipe Data | Keterangan                 | Missing Values | Catatan                                |
-|-------------|-----------|----------------------------|----------------|----------------------------------------|
-| User-ID     | Integer   | ID pengguna                | 0              | -                                      |
-| ISBN        | String    | ISBN buku                  | 0              | -                                      |
-| Book-Rating | Integer   | Rating (0–10)              | 0              | Rating < 6 tidak digunakan dalam model |
-
 
 ---
 
@@ -739,22 +713,6 @@ history = model.fit(
 
 ## 📈 Evaluation
 
-### Visualisasi Hasil
-
-```python
-plt.plot(history.history['root_mean_squared_error'])
-plt.plot(history.history['val_root_mean_squared_error'])
-plt.title('model_metrics')
-plt.ylabel('RMSE')
-plt.xlabel('epoch')
-plt.legend(['train', 'validation'], loc='upper left')
-plt.show()
-```
-![image](https://github.com/user-attachments/assets/a2c4dbc8-e344-49a0-9233-5471d271a816)
-
-
----
-
 ## Penjelasan RMSE
 
 RMSE (Root Mean Squared Error) dihitung dengan rumus:
@@ -778,9 +736,33 @@ Model stabil dan mampu mempelajari preferensi pengguna dengan cukup baik.
 
 ---
 
+### Visualisasi RMSE
+
+```python
+plt.plot(history.history['root_mean_squared_error'])
+plt.plot(history.history['val_root_mean_squared_error'])
+plt.title('model_metrics')
+plt.ylabel('RMSE')
+plt.xlabel('epoch')
+plt.legend(['train', 'validation'], loc='upper left')
+plt.show()
+```
+![image](https://github.com/user-attachments/assets/a2c4dbc8-e344-49a0-9233-5471d271a816)
+
+
+---
+
+🤖 Komparasi dan Penjelasan Model
+Model yang digunakan adalah *Collaborative Filtering* berbasis *Neural Network* (*Neural Collaborative Filtering*). Pendekatan ini menggunakan embedding untuk mewakili user dan buku, kemudian dilatih untuk memprediksi rating.
+📌 Catatan:
+- Proyek ini hanya menggunakan satu pendekatan utama (tanpa baseline/algoritma pembanding).
+- Pendekatan alternatif seperti Content-Based Filtering sempat dipertimbangkan, namun tidak diimplementasikan penuh karena fokus proyek adalah Collaborative Filtering.
+
+---
+
 ## 🔮 Prediksi & Rekomendasi
 
-### 📖 Cara Kerja Rekomendasi
+Setelah pelatihan model selesai, rekomendasi dilakukan dengan langkah berikut:
 
 1. Pilih user secara acak  
 2. Identifikasi buku yang belum dirating  
@@ -792,16 +774,41 @@ ratings = model.predict(user_book_array)
 top_ratings_indices = ratings.argsort()[-10:][::-1]
 ```
 
+Hasil ini membentuk sistem top-N recommendation, sesuai dengan tujuan proyek.
+
 ---
 
-## ✅ Kesimpulan
+### 🔁 Evaluasi terhadap Business Understanding
 
-Proyek ini berhasil membangun sistem rekomendasi buku berbasis **Collaborative Filtering Neural Network** menggunakan data rating buku dari Amazon.
+#### ✅ Evaluasi Problem Statements dan Goals
+|                          Item                             |                                 Evaluasi                        |
+|-----------------------------------------------------------|-----------------------------------------------------------------|
+| Problem 1: Memberi rekomendasi berdasar rating sebelumnya |✅ Model mempelajari pola rating dan memprediksi preferensi      |
+| Problem 2: Saran buku yang belum dibaca                   |✅ Model menyarankan buku baru berdasarkan embedding user & item |
+| Goal: Sistem top-N rekomendasi                            |✅ Sistem menghasilkan 10 rekomendasi personal tiap pengguna     |
+| Goal: Model akurat dan stabil                             |✅ RMSE cukup rendah & stabil (training vs validation)           |
 
-### 🔧 Model:
-- Stabil dan akurat dalam memprediksi preferensi pengguna  
-- Mampu menyarankan buku yang belum pernah dibaca user tetapi berpotensi disukai  
 
-### 💡 Dampak Bisnis:
-- Membantu pengguna menemukan buku relevan lebih cepat  
-- Berpotensi meningkatkan interaksi, retensi, dan pengalaman pengguna dalam platform e-book atau e-commerce
+---
+
+### 💼 Dampak terhadap Business Goals
+Model ini secara langsung mendukung kebutuhan bisnis, yaitu:
+- Meningkatkan pengalaman pengguna: membantu user menemukan buku relevan tanpa harus mencari secara manual.
+- Meningkatkan engagement dan retensi: sistem rekomendasi membuat pengguna lebih lama dan aktif dalam platform.
+- Efisiensi dan skalabilitas: model dapat memberikan rekomendasi untuk ratusan ribu pengguna dan buku secara otomatis.
+
+---
+
+## ✅ Kesimpulan Evaluasi
+
+Model berhasil menjawab semua *problem statement* dan mencapai *goals* yang ditetapkan.
+
+Sistem rekomendasi **stabil**, **akurat**, dan memberikan hasil yang dapat langsung diterapkan dalam konteks bisnis.
+
+Ke depan, model ini dapat disempurnakan dengan:
+
+- Algoritma pembanding (*baseline*) seperti **SVD**, **KNN**, dan lainnya
+- **Hybrid system** (menggabungkan *content-based* dan *collaborative filtering*)
+- Data tambahan seperti **genre**, **review**, atau **metadata** lainnya
+
+---
