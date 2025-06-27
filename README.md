@@ -77,9 +77,17 @@ users = pd.read_csv('users.csv', sep=';', encoding='latin1')
 ### Pembersihan Data
 
 - Hapus kolom gambar (`Image-URL`)
-- Isi nilai kosong pada `Book-Author` dan `Publisher`
-- Normalisasi `Year-Of-Publication`, buang nilai anomali (`<1000` atau `>2025`)
-- Normalisasi umur pengguna: ubah `Age <5` atau `Age >90` menjadi NaN, lalu isi dengan rata-rata
+- Isi nilai kosong pada kolom `Book-Author` dan `Publisher`
+  - Untuk kolom `Publisher`, dilakukan pencarian manual ke Amazon.
+  - Ditemukan dua ISBN dengan data penerbit sebagai berikut:
+    - `193169656X` → Penerbit: **NovelBooks, Inc.**
+    - `1931696993` → Penerbit: **CreateSpace Independent Publishing Platform**
+- Normalisasi nilai pada kolom `Year-Of-Publication`:
+  - Buang nilai yang tidak logis (`<1000` atau `>2025`)
+  - Gantikan nilai NaN dengan median, lalu ubah ke tipe data `int`
+- Normalisasi kolom `Age` (umur pengguna):
+  - Angka yang tidak realistis (`Age < 5` atau `Age > 90`) diubah menjadi `NaN`
+  - Nilai kosong diisi dengan rata-rata, lalu dikonversi menjadi integer
 
 ---
 
