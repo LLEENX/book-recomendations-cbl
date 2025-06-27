@@ -116,6 +116,56 @@ Dataset yang digunakan terdiri dari tiga file utama:
 
 > **Tindakan**: Nilai `Age < 5` atau `> 90` diubah menjadi NaN, kemudian diimputasi dengan rata-rata.
 
+### 🧼 Penanganan Nilai Kosong dan Outlier pada Kolom `Age`
+
+Salah satu fitur penting dalam `users.csv` adalah kolom **Age**. Namun, kolom ini memiliki banyak **nilai kosong dan outlier** yang perlu dibersihkan agar tidak mengganggu hasil pemodelan.
+
+Langkah-langkah yang dilakukan:
+
+1. Menampilkan distribusi awal nilai unik pada kolom `Age`
+2. Mengidentifikasi **usia tidak logis**: <5 tahun dan >90 tahun
+3. Mengganti nilai tidak logis menjadi `NaN`
+4. Mengisi nilai `NaN` dengan **rata-rata usia valid**
+5. Mengubah tipe data kolom `Age` dari float ke **integer** agar efisien
+
+```python
+# Identifikasi nilai tidak logis
+users['Age'] = users['Age'].apply(lambda x: np.nan if x < 5 or x > 90 else x)
+
+# Imputasi nilai kosong dengan rata-rata
+users['Age'].fillna(users['Age'].mean(), inplace=True)
+
+# Ubah tipe data ke integer
+users['Age'] = users['Age'].astype(int)
+```
+
+### 📈 Statistik Deskriptif Setelah Pembersihan:
+
+```text
+count    278858.000000
+mean         34.432926
+std          10.512758
+min           5.000000
+25%          29.000000
+50%          34.000000
+75%          35.000000
+max          90.000000
+```
+⚠️ Terdapat data yang tidak wajar sebelumnya di mana usia pengguna kurang dari 5 tahun atau lebih dari 90 tahun. Kini telah dibersihkan.
+
+🔢 Informasi Struktur Kolom users Setelah Dibersihkan
+
+```
+<class 'pandas.core.frame.DataFrame'>
+RangeIndex: 278858 entries, 0 to 278857
+Data columns (total 3 columns):
+ #   Column    Non-Null Count   Dtype 
+---  ------    --------------   ----- 
+ 0   User-ID   278858 non-null  int64 
+ 1   Location  278858 non-null  object
+ 2   Age       278858 non-null  int64
+```
+
 ---
 
 #### ⭐ ratings.csv
@@ -125,6 +175,9 @@ Dataset yang digunakan terdiri dari tiga file utama:
 | User-ID     | Integer   | ID pengguna                | 0              | -                                      |
 | ISBN        | String    | ISBN buku                  | 0              | -                                      |
 | Book-Rating | Integer   | Rating (0–10)              | 0              | Rating < 6 tidak digunakan dalam model |
+
+
+![image](https://github.com/user-attachments/assets/f88f4c28-7181-4c3c-af6f-213135e4fae0)
 
 
 
@@ -177,6 +230,8 @@ data_merged = ratings.merge(books, on='ISBN').merge(users, on='User-ID')
 ---
 
 ## 🧠 Modeling
+
+Untuk membangun sistem rekomendasi, digunakan pendekatan Collaborative Filtering berbasis Neural Network. Penjelasan konsep dan arsitektur model disajikan sebagai berikut:
 
 ### 🧠 Konsep Kerja Model Collaborative Filtering Neural Network
 
