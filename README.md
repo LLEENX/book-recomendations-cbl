@@ -85,8 +85,6 @@ Dataset yang digunakan terdiri dari tiga file utama:
 
 ---
 
----
-
 ## 🧹 Data Preparation
 
 ### Tahapan yang Dilakukan:
@@ -133,6 +131,8 @@ df['book'] = df['bookID'].map(book_to_book_encoded)
 
 > **Tindakan**: Kolom `Image-URL` dihapus, nilai kosong pada `Publisher` diisi manual, tahun tidak valid dihapus.
 
+---
+
 ### 🧼 Pembersihan Data pada books.csv
 Dataset books.csv memiliki 271.360 entri. Berikut hasil inspeksi awal menggunakan books.info():
 ```
@@ -162,6 +162,8 @@ Hasil:
 
 Dari gambar dapat diketahui bahwa ada beberapa kolom yang memiliki nilai kosong didalamnya yaitu, `Book-Author`, `Publisher`, dan `Image-URL-L`.
 
+---
+
 ### ✂️ Menghapus Kolom Gambar
 Kolom `Image-URL-S`, `Image-URL-M`, dan I`mage-URL-L` berisi tautan gambar buku yang tidak digunakan dalam sistem rekomendasi, sehingga dihapus untuk menyederhanakan data.
 
@@ -169,6 +171,8 @@ Kolom `Image-URL-S`, `Image-URL-M`, dan I`mage-URL-L` berisi tautan gambar buku 
 books_cleaned = books.copy()
 books_cleaned.drop(['Image-URL-S', 'Image-URL-M', 'Image-URL-L'], axis=1, inplace=True)
 ```
+
+---
 
 ### 🖊️ Menangani Missing Value pada Book-Author
 Terdapat 2 baris yang memiliki nilai kosong pada kolom Book-Author. Solusinya:
@@ -189,6 +193,8 @@ for idx in missing_authors.index:
 
 Sayangnya tidak ditemukan nama Author dari kedua data tersebut, oleh karena itu kedua data yang tidak memiliki Author diberi nilai 'Unknown'
 
+---
+
 ### 🏷️ Menangani Missing Value pada Publisher
 Ditemukan 2 baris dengan nilai kosong di kolom Publisher. Nilai ini diisi secara manual berdasarkan hasil pencarian informasi ISBN dari situs eksternal seperti Amazon:
 - ISBN 193169656X → NovelBooks, Inc.
@@ -203,6 +209,8 @@ books_cleaned.loc[books_cleaned['ISBN'] == '1931696993', 'Publisher'] = 'CreateS
 
 Kedua baris tersebut diisi secara manual berdasarkan hasil pencarian ISBN dari situs eksternal (seperti Amazon). Kita gunakan metode .loc[] untuk menyasar ISBN tertentu dan mengisi kolom Publisher yang kosong dengan data yang benar.
 
+---
+
 ### Cek kembali nilai data book yang kosong
 
 ```python
@@ -210,6 +218,8 @@ Kedua baris tersebut diisi secara manual berdasarkan hasil pencarian ISBN dari s
 books_cleaned.isnull().sum()
 ```
 ![image](https://github.com/user-attachments/assets/a2b780dc-fded-46c1-b7c7-e6aa36e0bd8c)
+
+---
 
 ### 📅 Pembersihan Kolom Year-Of-Publication
 
@@ -238,6 +248,8 @@ Disini saya akan melakukan beberapa hal:
 - Mengubah nilai tahun ke tipe int.
 - Mengganti nilai tidak valid (misalnya tahun < 1000 atau > 2025) dengan NaN, lalu imputasi menggunakan modus (tahun terbanyak).
 
+---
+
 ### 🔄 Mengubah kolom Year-Of-Publication
 
 Saya menggunakan pd.to_numeric() untuk mengubah kolom Year-Of-Publication menjadi angka (int64 atau float64).
@@ -263,6 +275,7 @@ Tahun yang tidak realistis:
 [np.float64(0.0), np.float64(1376.0), np.float64(1378.0), np.float64(1806.0), np.float64(1897.0), np.float64(1900.0), np.float64(1901.0), np.float64(1902.0), np.float64(1904.0), np.float64(1906.0)]
 [np.float64(2012.0), np.float64(2020.0), np.float64(2021.0), np.float64(2024.0), np.float64(2026.0), np.float64(2030.0), np.float64(2037.0), np.float64(2038.0), np.float64(2050.0), np.float64(nan)]
 ```
+---
 
 ### 🧼 Bersihkan tahun yang tidak valid
 
@@ -272,6 +285,7 @@ Tahun terbit buku yang valid umumnya berada antara 1000 dan 2025. Tahun di luar 
 # 🧼 Bersihkan tahun yang tidak valid: set jadi NaN jika < 1000 atau > 2025
 books_cleaned.loc[(books_cleaned['Year-Of-Publication'] < 1000) | (books_cleaned['Year-Of-Publication'] > 2025), 'Year-Of-Publication'] = np.nan
 ```
+---
 
 ### 🧮 Isi nilai NaN dengan median tahun yang valid
 
@@ -369,7 +383,9 @@ users['Age'].fillna(users['Age'].mean(), inplace=True)
 # Ubah tipe data ke integer
 users['Age'] = users['Age'].astype(int)
 ```
-🔢 Mengubah Tipe Data ke Integer
+---
+
+### 🔢 Mengubah Tipe Data ke Integer
 Setelah nilai usia dibersihkan dan tidak lagi mengandung nilai kosong, kita ubah tipe data dari float ke integer (int). Hal ini dilakukan agar kolom Age lebih sesuai untuk interpretasi dan efisien dalam penyimpanan memori.
 
 ```python
@@ -382,8 +398,9 @@ print("Nilai unik Age (setelah dibersihkan):")
 print(sorted(user_cleaned['Age'].unique()))
 
 ```
+---
 
-🔢 Informasi Struktur Kolom users Setelah Dibersihkan
+### 🔢 Informasi Struktur Kolom users Setelah Dibersihkan
 
 ```
 <class 'pandas.core.frame.DataFrame'>
