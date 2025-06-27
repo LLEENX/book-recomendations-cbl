@@ -174,6 +174,7 @@ books_cleaned.drop(['Image-URL-S', 'Image-URL-M', 'Image-URL-L'], axis=1, inplac
 
 ---
 
+
 ### 🖊️ Menangani Missing Value pada Book-Author
 Terdapat 2 baris yang memiliki nilai kosong pada kolom Book-Author. Solusinya:
 - Jika ISBN ditemukan pada baris lain dengan nilai Book-Author yang valid, maka nilai diambil dari sana
