@@ -150,12 +150,12 @@ class RecommenderNet(tf.keras.Model):
 
 ---
 
-### ⚙️ Kompilasi & Pelatihan
+## ⚙️ Kompilasi & Pelatihan
 
-- **Loss Function**: `BinaryCrossentropy`
-- **Optimizer**: `Adam`
-- **Metrik**: `RootMeanSquaredError`
-- **Epoch**: 30
+- **Loss Function**: `BinaryCrossentropy`  
+- **Optimizer**: `Adam`  
+- **Metrik**: `RootMeanSquaredError`  
+- **Epoch**: 30  
 - **Batch size**: 64
 
 ```python
@@ -164,7 +164,13 @@ model.compile(
     optimizer=keras.optimizers.Adam(learning_rate=0.001),
     metrics=[tf.keras.metrics.RootMeanSquaredError()]
 )
-history = model.fit(x_train, y_train, validation_data=(x_val, y_val), epochs=30, batch_size=64)
+
+history = model.fit(
+    x_train, y_train,
+    validation_data=(x_val, y_val),
+    epochs=30,
+    batch_size=64
+)
 ```
 
 ---
@@ -184,16 +190,29 @@ plt.show()
 ```
 ![image](https://github.com/user-attachments/assets/21364825-443a-41ea-a2cc-635aabc42e3a)
 
+
 ---
 
-### 📊 Interpretasi Evaluasi
+## Penjelasan RMSE
 
-| Metrik           | Nilai   | Penjelasan                                  |
-|------------------|---------|---------------------------------------------|
-| RMSE (Training)  | ~0.019  | Cukup rendah (rating distandarisasi 0–1)   |
-| RMSE (Validation)| ~0.310  | Konsisten, tidak overfitting               |
+RMSE (Root Mean Squared Error) dihitung dengan rumus:
 
-> Model stabil dan mampu mempelajari preferensi pengguna dengan cukup baik.
+\[
+\text{RMSE} = \sqrt{ \frac{1}{n} \sum_{i=1}^n (y_i - \hat{y}_i)^2 }
+\]
+
+RMSE digunakan untuk mengukur seberapa besar perbedaan antara prediksi model dengan nilai rating aktual.
+
+---
+
+## 📊 Interpretasi Evaluasi
+
+| Metrik           | Nilai   | Penjelasan                               |
+|------------------|---------|------------------------------------------|
+| RMSE (Training)  | ~0.019  | Cukup rendah (rating distandarisasi 0–1)|
+| RMSE (Validation)| ~0.310  | Konsisten, tidak overfitting            |
+
+Model stabil dan mampu mempelajari preferensi pengguna dengan cukup baik.
 
 ---
 
@@ -201,10 +220,10 @@ plt.show()
 
 ### 📖 Cara Kerja Rekomendasi
 
-1. Pilih user secara acak
-2. Identifikasi buku yang belum dirating
-3. Prediksi kemungkinan user menyukai buku
-4. Pilih 10 buku teratas dengan prediksi tertinggi
+1. Pilih user secara acak  
+2. Identifikasi buku yang belum dirating  
+3. Prediksi kemungkinan user menyukai buku  
+4. Pilih 10 buku teratas dengan prediksi tertinggi  
 
 ```python
 ratings = model.predict(user_book_array)
@@ -213,22 +232,31 @@ top_ratings_indices = ratings.argsort()[-10:][::-1]
 
 ---
 
-### 📘 Contoh Hasil Rekomendasi
+## 📘 Contoh Hasil Rekomendasi
 
-**📚 User ID**: `random_user_001`
+**📚 Menampilkan Rekomendasi untuk User ID: 92979**  
+===================================
 
-#### Buku yang Disukai Sebelumnya:
-- *Harry Potter and the Goblet of Fire* - oleh J.K. Rowling  
-- *Angels & Demons* - oleh Dan Brown
+### 📘 Buku yang sebelumnya diberi rating tinggi:
+-----------------------------------  
+- *A Yellow Raft in Blue Water* — oleh Michael Dorris  
+- *More Headlines* — oleh Jay Leno  
+-----------------------------------
 
-#### 📗 10 Buku yang Direkomendasikan:
-- *The Da Vinci Code* - oleh Dan Brown  
-- *The Lord of the Rings* - oleh J.R.R. Tolkien  
-- *A Walk to Remember* - oleh Nicholas Sparks  
-- *The Notebook* - oleh Nicholas Sparks  
-- *The Hobbit* - oleh J.R.R. Tolkien  
-- *(dan lainnya...)*
-  
+### 📗 10 Rekomendasi Buku Terbaik:
+-----------------------------------  
+- *The Boy Next Door* — oleh Meggin Cabot  
+- *Harold and the Purple Crayon 50th Anniversary Edition (Purple Crayon Books)* — oleh Crockett Johnson  
+- *I Am Legend* — oleh Richard Matheson  
+- *Secrets of the Vine Devotional (The Breakthrough Series)* — oleh Bruce Wilkinson  
+- *The Door into Summer* — oleh Robert A. Heinlein  
+- *Live Albom: The Best of Detroit Free Press Sports Columnist Mitch Albom (Live Albom)* — oleh Mitch Albom  
+- *The Vampire Lestat (Vampire Chronicles, Book II)* — oleh ANNE RICE  
+- *Flashback* — oleh Nevada Barr  
+- *The Collected Stories of Isaac Bashevis Singer* — oleh Isaac Bashevis Singer  
+- *Curanderismo: Mexican American Folk Healing* — oleh Robert T., Ii Trotter  
+-----------------------------------
+
 ---
 
 ## ✅ Kesimpulan
@@ -236,9 +264,9 @@ top_ratings_indices = ratings.argsort()[-10:][::-1]
 Proyek ini berhasil membangun sistem rekomendasi buku berbasis **Collaborative Filtering Neural Network** menggunakan data rating buku dari Amazon.
 
 ### 🔧 Model:
-- Stabil dan akurat dalam memprediksi preferensi pengguna
-- Mampu menyarankan buku yang belum pernah dibaca user tetapi berpotensi disukai
+- Stabil dan akurat dalam memprediksi preferensi pengguna  
+- Mampu menyarankan buku yang belum pernah dibaca user tetapi berpotensi disukai  
 
 ### 💡 Dampak Bisnis:
-- Membantu pengguna menemukan buku relevan lebih cepat
+- Membantu pengguna menemukan buku relevan lebih cepat  
 - Berpotensi meningkatkan interaksi, retensi, dan pengalaman pengguna dalam platform e-book atau e-commerce
